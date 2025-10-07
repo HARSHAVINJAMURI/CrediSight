@@ -268,14 +268,28 @@ elif task == "⏳ Processing Days Prediction (Regression)":
 elif task == "📦 Delay Bucket Classification":
     st.subheader("📦 Delay Bucket Classification")
 
+    # Prepare features and target
     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "processing_days", "total_delay"])
     y = df["dpd_bucket"]
 
+    # Split data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=42)
+
+    # ✅ Fixed XGBoost configuration
+    model = XGBClassifier(
+        use_label_encoder=False,
+        eval_metric='mlogloss',
+        objective='multi:softmax',
+        base_score=0.5,
+        random_state=42,
+        num_class=len(np.unique(y_train))
+    )
+
+    # Fit model
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
+    # Display metrics
     st.text("📊 Classification Report:")
     st.text(classification_report(y_test, y_pred))
 
@@ -285,6 +299,7 @@ elif task == "📦 Delay Bucket Classification":
     importance.head(10).plot(kind='bar', ax=ax)
     ax.set_title("Top 10 Important Features - Delay Bucket")
     st.pyplot(fig)
+
 
 
 elif task == "🚨 Anomaly Detection":
@@ -307,239 +322,3 @@ elif task == "🚨 Anomaly Detection":
         sns.scatterplot(x="credit_score", y="salary", hue="anomaly_flag", data=df, palette="coolwarm", alpha=0.7, ax=ax)
         ax.set_title("Credit Score vs Salary (Anomalies Highlighted)")
         st.pyplot(fig)
-
-
-
-
-
-
-# import streamlit as st
-# import pandas as pd
-# import numpy as np
-# from io import StringIO
-# from sklearn.preprocessing import LabelEncoder
-# from sklearn.model_selection import train_test_split
-# from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, IsolationForest
-# from sklearn.metrics import classification_report, mean_absolute_error, confusion_matrix
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-
-# st.set_page_config(page_title="Credit App Analyzer", layout="wide")
-# st.title("📊 Credit Card Application ML Analyzer")
-
-# # -------------------------------
-# # Sample fallback CSV with delay_bucket
-# sample_csv = """
-# customer_id,age,salary,credit_score,employment_type,application_source,document_completeness,past_payment_delays,credit_utilization,document_submission_delay,processing_days,application_status,default_flag,delay_bucket
-# C001,35,60000,700,Salaried,Web,0.9,2,0.4,5,10,Approved,0,0-30
-# C002,42,80000,720,Self-Employed,Agent,0.8,0,0.3,2,5,Approved,0,0-30
-# C003,28,40000,650,Salaried,Web,0.7,5,0.5,10,15,Rejected,1,0-30
-# C004,50,95000,800,Salaried,Branch,1.0,1,0.2,1,3,Approved,0,0-30
-# C005,38,50000,620,Self-Employed,Agent,0.6,3,0.6,7,12,Pending,1,30-60
-# """
-
-
-# # ---------- CSV Selection Option ----------
-# st.header("Step 1: Choose Your Data")
-# use_sample = st.radio("Choose a data source:", ("📂 Upload your CSV", "📄 Use built-in sample CSV"))
-
-# if use_sample == "📂 Upload your CSV":
-#     uploaded_file = st.file_uploader("Upload your credit_card_application_data.csv", type=["csv"])
-#     if uploaded_file:
-#         df = pd.read_csv(uploaded_file)
-#         st.success("✅ Uploaded CSV loaded successfully.")
-#     else:
-#         st.warning("⚠️ Please upload a CSV file to proceed.")
-#         st.stop()
-# else:
-#     df = pd.read_csv(StringIO(sample_csv))
-#     st.success("✅ Using built-in sample CSV data.")
-
-# # ---------- Data Preprocessing ----------
-# def assign_bucket(days):
-#     if days <= 30: return '0-30'
-#     elif days <= 60: return '30-60'
-#     elif days <= 90: return '60-90'
-#     elif days <= 120: return '90-120'
-#     elif days <= 150: return '120-150'
-#     elif days <= 180: return '150-180'
-#     else: return '180+'
-
-# df["total_delay"] = df["processing_days"] + df["document_submission_delay"]
-# df["dpd_bucket"] = df["total_delay"].apply(assign_bucket)
-
-# label_cols = ["employment_type", "application_source", "application_status", "dpd_bucket"]
-# label_encoders = {}
-# for col in label_cols:
-#     le = LabelEncoder()
-#     df[col] = le.fit_transform(df[col])
-#     label_encoders[col] = le
-
-# if st.checkbox("Show DataFrame"):
-#     st.dataframe(df)
-
-# # ---------- Task Selection ----------
-# st.header("Step 2: Select Task to Perform")
-# task = st.selectbox("Choose a functionality", [
-#     "Select",
-#     "📌 Application Status Classification",
-#     "⚠️ Default Flag Prediction",
-#     "⏳ Processing Days Prediction (Regression)",
-#     "📦 Delay Bucket Classification",
-#     "🚨 Anomaly Detection"
-# ])
-
-# # ---------- Task Execution ----------
-# if task == "📌 Application Status Classification":
-#     st.subheader("Application Status Classification")
-#     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "total_delay"])
-#     y = df["application_status"]
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#     model = RandomForestClassifier(n_estimators=100, random_state=42)
-#     model.fit(X_train, y_train)
-#     y_pred = model.predict(X_test)
-#     st.text("Classification Report:")
-#     st.text(classification_report(y_test, y_pred))
-
-#     cm = confusion_matrix(y_test, y_pred)
-#     fig, ax = plt.subplots()
-#     sns.heatmap(cm, annot=True, fmt="d", ax=ax,
-#                 xticklabels=label_encoders["application_status"].classes_,
-#                 yticklabels=label_encoders["application_status"].classes_)
-#     st.pyplot(fig)
-
-# elif task == "⚠️ Default Flag Prediction":
-#     st.subheader("Default Flag Prediction")
-#     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "total_delay"])
-#     y = df["default_flag"]
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#     model = RandomForestClassifier(n_estimators=100, random_state=42)
-#     model.fit(X_train, y_train)
-#     y_pred = model.predict(X_test)
-#     st.text("Classification Report:")
-#     st.text(classification_report(y_test, y_pred))
-
-# elif task == "⏳ Processing Days Prediction (Regression)":
-#     st.subheader("Processing Days Regression")
-#     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "processing_days", "total_delay"])
-#     y = df["processing_days"]
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#     model = RandomForestRegressor(n_estimators=100, random_state=42)
-#     model.fit(X_train, y_train)
-#     y_pred = model.predict(X_test)
-#     mae = mean_absolute_error(y_test, y_pred)
-#     st.text(f"Mean Absolute Error: {mae:.2f} days")
-
-#     fig, ax = plt.subplots()
-#     ax.scatter(y_test, y_pred, alpha=0.5)
-#     ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
-#     ax.set_xlabel("Actual")
-#     ax.set_ylabel("Predicted")
-#     ax.set_title("Processing Time Prediction")
-#     st.pyplot(fig)
-
-# elif task == "📦 Delay Bucket Classification":
-#     st.subheader("DPD Bucket Classification")
-#     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "processing_days", "total_delay"])
-#     y = df["dpd_bucket"]
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#     model = RandomForestClassifier(n_estimators=100, random_state=42)
-#     model.fit(X_train, y_train)
-#     y_pred = model.predict(X_test)
-#     st.text("Classification Report:")
-#     st.text(classification_report(y_test, y_pred))
-
-# elif task == "🚨 Anomaly Detection":
-#     st.subheader("Anomaly Detection")
-#     num_cols = [
-#         "age", "salary", "credit_score", "document_completeness",
-#         "past_payment_delays", "credit_utilization", "processing_days", "document_submission_delay"
-#     ]
-#     iso = IsolationForest(contamination=0.05, random_state=42)
-#     iso.fit(df[num_cols])
-#     df["anomaly_flag"] = iso.predict(df[num_cols])
-
-#     fig, ax = plt.subplots()
-#     sns.countplot(x="anomaly_flag", data=df, ax=ax)
-#     ax.set_title("Anomaly Detection (1 = Normal, -1 = Suspicious)")
-#     st.pyplot(fig)
-
-#     st.success(f"Suspicious Applications Detected: {(df['anomaly_flag'] == -1).sum()}")
-
-# # -------------- Step 6: Run Models --------------
-# if task == "📌 Application Status Classification":
-#     st.subheader("📌 Application Status Classification")
-#     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "total_delay"])
-#     y = df["application_status"]
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#     model = RandomForestClassifier(n_estimators=100, random_state=42)
-#     model.fit(X_train, y_train)
-#     y_pred = model.predict(X_test)
-
-#     st.text("Classification Report:")
-#     st.text(classification_report(y_test, y_pred))
-
-#     cm = confusion_matrix(y_test, y_pred)
-#     fig, ax = plt.subplots()
-#     sns.heatmap(cm, annot=True, fmt="d", ax=ax,
-#                 xticklabels=label_encoders["application_status"].classes_,
-#                 yticklabels=label_encoders["application_status"].classes_)
-#     st.pyplot(fig)
-
-# elif task == "⚠️ Default Flag Prediction":
-#     st.subheader("⚠️ Default Flag Classification")
-#     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "total_delay"])
-#     y = df["default_flag"]
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#     model = RandomForestClassifier(n_estimators=100, random_state=42)
-#     model.fit(X_train, y_train)
-#     y_pred = model.predict(X_test)
-#     st.text("Classification Report:")
-#     st.text(classification_report(y_test, y_pred))
-
-# elif task == "⏳ Processing Days Prediction (Regression)":
-#     st.subheader("⏳ Processing Days Regression")
-#     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "processing_days", "total_delay"])
-#     y = df["processing_days"]
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#     model = RandomForestRegressor(n_estimators=100, random_state=42)
-#     model.fit(X_train, y_train)
-#     y_pred = model.predict(X_test)
-#     mae = mean_absolute_error(y_test, y_pred)
-#     st.text(f"📉 Mean Absolute Error: {mae:.2f} days")
-
-#     fig, ax = plt.subplots()
-#     ax.scatter(y_test, y_pred, alpha=0.5)
-#     ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
-#     ax.set_xlabel("Actual")
-#     ax.set_ylabel("Predicted")
-#     ax.set_title("Processing Time Prediction")
-#     st.pyplot(fig)
-
-# elif task == "📦 Delay Bucket Classification":
-#     st.subheader("📦 DPD Bucket Classification")
-#     X = df.drop(columns=["customer_id", "application_status", "default_flag", "dpd_bucket", "processing_days", "total_delay"])
-#     y = df["dpd_bucket"]
-#     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-#     model = RandomForestClassifier(n_estimators=100, random_state=42)
-#     model.fit(X_train, y_train)
-#     y_pred = model.predict(X_test)
-#     st.text("Classification Report:")
-#     st.text(classification_report(y_test, y_pred))
-
-# elif task == "🚨 Anomaly Detection":
-#     st.subheader("🚨 Anomaly Detection using Isolation Forest")
-#     num_cols = [
-#         "age", "salary", "credit_score", "document_completeness",
-#         "past_payment_delays", "credit_utilization", "processing_days", "document_submission_delay"
-#     ]
-#     iso = IsolationForest(contamination=0.05, random_state=42)
-#     iso.fit(df[num_cols])
-#     df["anomaly_flag"] = iso.predict(df[num_cols])
-
-#     fig, ax = plt.subplots()
-#     sns.countplot(x="anomaly_flag", data=df, ax=ax)
-#     ax.set_title("Anomaly Detection (1 = Normal, -1 = Suspicious)")
-#     st.pyplot(fig)
-
-#     st.success(f"🚨 Suspicious Applications Detected: {(df['anomaly_flag'] == -1).sum()}")
