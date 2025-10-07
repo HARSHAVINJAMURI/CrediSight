@@ -275,30 +275,29 @@ elif task == "📦 Delay Bucket Classification":
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # ✅ Fixed XGBoost configuration
+    # ✅ Fixed XGBoost config (no deprecated params)
     model = XGBClassifier(
-        use_label_encoder=False,
-        eval_metric='mlogloss',
         objective='multi:softmax',
-        base_score=0.5,
-        random_state=42,
-        num_class=len(np.unique(y_train))
+        eval_metric='mlogloss',
+        num_class=len(np.unique(y_train)),
+        random_state=42
     )
 
     # Fit model
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
-    # Display metrics
+    # 📊 Metrics with clean output
     st.text("📊 Classification Report:")
-    st.text(classification_report(y_test, y_pred))
+    st.text(classification_report(y_test, y_pred, zero_division=0))
 
-    # Feature Importance
+    # 🔍 Feature Importance
     importance = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False)
     fig, ax = plt.subplots()
-    importance.head(10).plot(kind='bar', ax=ax)
+    importance.head(10).plot(kind='bar', ax=ax, color='teal')
     ax.set_title("Top 10 Important Features - Delay Bucket")
     st.pyplot(fig)
+
 
 
 
